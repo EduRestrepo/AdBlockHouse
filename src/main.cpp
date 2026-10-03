@@ -960,8 +960,7 @@ static void startConfigPortal() {
   int n = WiFi.scanNetworks();
   portalOpts = "";
   for (int i = 0; i < n && i < 15; i++) portalOpts += "<option value='" + jesc(WiFi.SSID(i)) + "'>";
-  uint8_t mac[6]; WiFi.macAddress(mac);
-  char ap[24]; snprintf(ap, sizeof(ap), "C3-AdBlock-%02X%02X", mac[4], mac[5]);
+  const char* ap = "AdBlock-House";
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap);
   IPAddress apIP = WiFi.softAPIP();

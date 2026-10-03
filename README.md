@@ -63,7 +63,7 @@ python -m platformio run -t uploadfs
 ### 🔌 Router Setup
 
 1. Unplug the ESP32 from your PC and **plug it into any spare USB port on your router** for power.
-2. From your phone or laptop, connect to the open setup network: **`C3-AdBlock-XXXX`**.
+2. From your phone or laptop, connect to the open setup network: **`AdBlock-House`**.
 3. The captive portal will pop up: select your home WiFi network and enter its password.
 4. In your router's DHCP settings, assign the ESP32 a static IP (e.g. `192.168.1.50`) and set it as your **Primary DNS**.
 5. Open **`http://c3adblock.local`** in any browser to access the live dashboard.
@@ -146,7 +146,7 @@ python -m platformio run -t uploadfs
 ### 🔌 Instalación en el Router
 
 1. Desconecta el ESP32 del PC y **conéctalo a un puerto USB de tu router** (alimentación).
-2. Conéctate desde tu móvil a la red WiFi abierta: **`C3-AdBlock-XXXX`**.
+2. Conéctate desde tu móvil a la red WiFi abierta: **`AdBlock-House`**.
 3. Se abrirá el portal cautivo: selecciona tu red WiFi e introduce la contraseña.
 4. En la configuración DHCP de tu router, asigna como **DNS Primario** la IP del ESP32 (por ejemplo `192.168.1.50`).
 5. Abre en tu navegador: **`http://c3adblock.local`** para entrar al panel de control.
