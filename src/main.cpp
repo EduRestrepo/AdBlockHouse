@@ -37,8 +37,66 @@ static const uint64_t HASH_MASK = (1ULL << (HASH_BYTES * 8)) - 1;
 WiFiUDP dnsServer, upstreamCli;
 WebServer web(80);
 File blocklist;
-uint32_t numHashes = 0, totalBlocked = 0, totalAllowed = 0, cacheHits = 0;
+uint32_t numHashes = 0, totalBlocked = 0, totalAllowed = 0, cacheHits = 0, totalCnameBlocked = 0;
 uint8_t buf[600];
+static bool blockingOn = true;
+static uint32_t resumeAt = 0;
+
+// ---- Status LED (GPIO8 on ESP32-C3 SuperMini & DevKits) ----
+static const int LED_PIN = 8;
+static bool ledEnabled = true;
+static uint32_t lastLedToggle = 0;
+static bool ledState = false;
+static uint32_t ledFlickerUntil = 0;
+
+static void triggerLedBlockFlicker() {
+  if (ledEnabled) {
+    ledFlickerUntil = millis() + 60; // 60ms off-pulse on sinkholed ad/tracker
+    digitalWrite(LED_PIN, HIGH);
+  }
+}
+
+static void updateLed(bool isPortal = false) {
+  if (!ledEnabled) {
+    digitalWrite(LED_PIN, HIGH); // OFF (active-low)
+    return;
+  }
+  uint32_t now = millis();
+  if (isPortal) {
+    if (now - lastLedToggle >= 100) { // Fast blink in captive portal
+      lastLedToggle = now;
+      ledState = !ledState;
+      digitalWrite(LED_PIN, ledState ? LOW : HIGH);
+    }
+  } else if (!blockingOn) {
+    if (now - lastLedToggle >= 600) { // Slow blink when paused
+      lastLedToggle = now;
+      ledState = !ledState;
+      digitalWrite(LED_PIN, ledState ? LOW : HIGH);
+    }
+  } else {
+    if (now < ledFlickerUntil) {
+      digitalWrite(LED_PIN, HIGH); // Off-pulse on blocked query
+    } else {
+      digitalWrite(LED_PIN, LOW);  // Solid ON when actively protecting
+    }
+  }
+}
+
+static void loadLedCfg() {
+  File f = LittleFS.open("/led.cfg", "r");
+  if (!f) return;
+  String s = f.readStringUntil('\n'); s.trim();
+  if (s == "0") ledEnabled = false;
+  f.close();
+}
+
+static void saveLedCfg() {
+  File f = LittleFS.open("/led.cfg", "w");
+  if (!f) return;
+  f.println(ledEnabled ? "1" : "0");
+  f.close();
+}
 
 // ---- RAM Checkpoint Index for Flash Search ----
 // Drastically cuts flash binary search reads from ~18 to ~5-7
@@ -151,9 +209,7 @@ static Preferences prefs;
 static DNSServer   dnsPortal;
 static String      portalOpts;
 
-// Blocking pause
-static bool     blockingOn = true;
-static uint32_t resumeAt   = 0;
+
 
 // ---- Live Query Log Ring Buffer ----
 struct QueryLogEntry {
@@ -261,6 +317,70 @@ static bool isBlocked(const char* domain, bool* isCustomOut) {
     const char* next = dot + 1;
     if (!strchr(next, '.')) break;
     p = next;
+  }
+  return false;
+}
+
+// ---------- CNAME Cloaking Detection ----------
+static bool extractDnsName(const uint8_t* pkt, int len, int offset, char* out, size_t outMax) {
+  int ptrs = 0;
+  size_t outPos = 0;
+  int curr = offset;
+  while (curr < len && ptrs < 8) {
+    uint8_t l = pkt[curr];
+    if (l == 0) break;
+    if ((l & 0xC0) == 0xC0) {
+      if (curr + 1 >= len) return false;
+      int next = ((l & 0x3F) << 8) | pkt[curr + 1];
+      if (next >= len) return false;
+      curr = next;
+      ptrs++;
+      continue;
+    }
+    curr++;
+    if (outPos + l + 1 >= outMax || curr + l > len) return false;
+    if (outPos > 0) out[outPos++] = '.';
+    for (uint8_t k = 0; k < l; k++) out[outPos++] = tolower(pkt[curr++]);
+  }
+  out[outPos] = 0;
+  if (outPos > 4 && strncmp(out, "www.", 4) == 0) {
+    memmove(out, out + 4, outPos - 3);
+  }
+  return (outPos > 0);
+}
+
+static bool checkCnameCloak(const uint8_t* pkt, int len, int qend, char* cloakDomain, size_t maxLen) {
+  if (len < 12 || qend >= len) return false;
+  uint16_t ancount = (pkt[6] << 8) | pkt[7];
+  if (ancount == 0) return false;
+
+  int curr = qend;
+  for (int a = 0; a < ancount && curr < len; a++) {
+    if (curr >= len) break;
+    if ((pkt[curr] & 0xC0) == 0xC0) {
+      curr += 2;
+    } else {
+      while (curr < len && pkt[curr] != 0) {
+        curr += (pkt[curr] + 1);
+      }
+      curr++;
+    }
+    if (curr + 10 > len) break;
+    uint16_t rtype = ((uint16_t)pkt[curr] << 8) | pkt[curr + 1];
+    uint16_t rdlen = ((uint16_t)pkt[curr + 8] << 8) | pkt[curr + 9];
+    int rdata = curr + 10;
+    curr = rdata + rdlen;
+
+    if (rtype == 5) { // CNAME Record
+      char target[128];
+      if (extractDnsName(pkt, len, rdata, target, sizeof(target))) {
+        if (!isAllowed(target) && isBlocked(target, nullptr)) {
+          strncpy(cloakDomain, target, maxLen - 1);
+          cloakDomain[maxLen - 1] = 0;
+          return true;
+        }
+      }
+    }
   }
   return false;
 }
@@ -588,6 +708,7 @@ static bool handleDns() {
       int rlen = buildBlocked(qend, qtype);
       totalBlocked++;
       c->blocked++;
+      triggerLedBlockFlicker();
       addLog((uint32_t)cip, domain, qtype, 5); // 5=Banned
       dnsServer.beginPacket(cip, cport);
       dnsServer.write(buf, rlen);
@@ -625,6 +746,7 @@ static bool handleDns() {
       rlen = buildBlocked(qend, qtype);
       totalBlocked++;
       if (c) c->blocked++;
+      triggerLedBlockFlicker();
       addLog((uint32_t)cip, domain, qtype, isCustom ? 1 : 0);
     } else {
       uint64_t dh = dl ? fnv40(domain, dl) : 0;
@@ -632,11 +754,23 @@ static bool handleDns() {
         addLog((uint32_t)cip, domain, qtype, 3); // Cache hit
       } else {
         rlen = forwardUpstream(qlen);
-        if (rlen > 0 && dl) storeCache(dh, qtype, buf, rlen, qend);
-        addLog((uint32_t)cip, domain, qtype, 2); // Upstream
+        if (rlen > 0 && dl) {
+          char cloakTarget[128];
+          if (blockingOn && checkCnameCloak(buf, rlen, qend, cloakTarget, sizeof(cloakTarget))) {
+            rlen = buildBlocked(qend, qtype);
+            totalBlocked++;
+            totalCnameBlocked++;
+            if (c) c->blocked++;
+            triggerLedBlockFlicker();
+            addLog((uint32_t)cip, domain, qtype, 6); // 6 = CNAME Cloaked
+          } else {
+            storeCache(dh, qtype, buf, rlen, qend);
+            addLog((uint32_t)cip, domain, qtype, 2); // Upstream
+            totalAllowed++;
+            if (c) c->allowed++;
+          }
+        }
       }
-      totalAllowed++;
-      if (c) c->allowed++;
     }
 
     if (rlen > 0) {
@@ -672,7 +806,8 @@ static void handleStats() {
   snprintf(ut, sizeof(ut), "%lud %luh %lum", up/86400, (up%86400)/3600, (up%3600)/60);
 
   String j = "{\"ip\":\"" + WiFi.localIP().toString() + "\",\"blocked\":" + totalBlocked +
-             ",\"allowed\":" + totalAllowed + ",\"cacheHits\":" + cacheHits +
+             ",\"allowed\":" + totalAllowed + ",\"cname\":" + totalCnameBlocked +
+             ",\"cacheHits\":" + cacheHits +
              ",\"domains\":" + numHashes + ",\"rssi\":" + WiFi.RSSI() +
              ",\"temp\":" + String(temperatureRead(), 1) +
              ",\"heap\":" + ESP.getFreeHeap() + ",\"uptime\":\"" + ut + "\"" +
@@ -681,6 +816,7 @@ static void handleStats() {
              ",\"upstat\":\"" + jesc(updateStatus) + "\"" +
              ",\"blocking\":" + (blockingOn ? "true" : "false") +
              ",\"resumeIn\":" + (uint32_t)(!blockingOn && resumeAt ? (resumeAt - millis()) / 1000 : 0) +
+             ",\"led\":" + (ledEnabled ? "true" : "false") +
              ",\"clients\":[";
 
   for (int i = 0; i < numClients; i++) {
@@ -973,11 +1109,16 @@ static void startConfigPortal() {
   while (true) {
     dnsPortal.processNextRequest();
     web.handleClient();
+    updateLed(true);
     delay(2);
   }
 }
 
 void setup() {
+  pinMode(LED_PIN, OUTPUT);
+  loadLedCfg();
+  updateLed(false);
+
   Serial.begin(115200);
   delay(300);
   Serial.println("\n[c3-adblock-pro] booting");
@@ -1026,6 +1167,14 @@ void setup() {
   web.on("/ban", handleBan);
   web.on("/setlabel", handleSetLabel);
   web.on("/setupstream", handleSetUpstream);
+  web.on("/setled", []() {
+    if (web.hasArg("en")) {
+      ledEnabled = (web.arg("en") == "1" || web.arg("en") == "true");
+      saveLedCfg();
+      updateLed(false);
+    }
+    web.send(200, "text/plain", ledEnabled ? "1" : "0");
+  });
   web.on("/addblock", []() { addCustom(web.arg("d")); web.send(200, "text/plain", "ok"); });
   web.on("/unblock", []() { removeCustom(web.arg("d")); web.send(200, "text/plain", "ok"); });
   web.on("/addallow", []() { addAllow(web.arg("d")); web.send(200, "text/plain", "ok"); });
@@ -1075,6 +1224,7 @@ void setup() {
 }
 
 void loop() {
+  updateLed(false);
   ArduinoOTA.handle();
   web.handleClient();
   bool busy = handleDns();

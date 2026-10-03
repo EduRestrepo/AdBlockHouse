@@ -456,6 +456,7 @@ button.btn-sm {
         <div class="stat-title">Bloqueados <span>🔴</span></div>
         <div id="stBlocked" class="stat-value c-blocked">0</div>
         <div id="stBlockedPct" class="stat-sub">0% del tráfico total</div>
+        <div style="font-size:11px;color:#f0abfc;margin-top:6px;font-weight:600">🕵️ <span id="stCname">0</span> CNAME camuflados</div>
       </div>
       <div class="stat-card">
         <div class="stat-title">Permitidos <span>🟢</span></div>
@@ -509,6 +510,10 @@ button.btn-sm {
             <div id="sysTemp" class="sys-val">0 °C</div>
           </div>
           <div class="sys-item">
+            <div class="sys-label">LED Onboard (GPIO 8)</div>
+            <div id="sysLed" class="sys-val" style="color:var(--success)">Activo</div>
+          </div>
+          <div class="sys-item">
             <div class="sys-label">Señal WiFi (RSSI)</div>
             <div id="sysRssi" class="sys-val">0 dBm</div>
           </div>
@@ -535,6 +540,7 @@ button.btn-sm {
           <select id="logFilter" onchange="renderLogTable()">
             <option value="all">Todas</option>
             <option value="blocked">Solo Bloqueadas</option>
+            <option value="cname">Solo CNAME Camuflados</option>
             <option value="allowed">Solo Permitidas</option>
             <option value="cache">Solo Caché</option>
           </select>
@@ -653,6 +659,21 @@ button.btn-sm {
       </div>
       <div style="font-size:12px;color:var(--text-muted)">Estado último intento: <span id="ustat" style="color:var(--text)">—</span></div>
     </div>
+
+    <div class="card">
+      <div class="card-title">Control de LED Físico de Estado (GPIO 8)</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Controla el LED azul onboard (GPIO 8) del ESP32-C3 SuperMini/DevKit. Parpadea durante la configuración WiFi, parpadea lento si el filtrado está en pausa, y emite un micropulso al bloquear un anuncio. Si el dongle está en un dormitorio, puedes apagarlo completamente.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#0d1322;padding:14px 18px;border-radius:10px;border:1px solid var(--surface-border)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:22px">💡</span>
+          <div>
+            <b id="ledTitle">LED Onboard Activo</b>
+            <div id="ledSubtitle" style="font-size:12px;color:var(--text-muted)">Encendido con pulsos de actividad</div>
+          </div>
+        </div>
+        <button id="ledToggleBtn" class="btn-primary" onclick="toggleLed()">Apagar LED</button>
+      </div>
+    </div>
   </div>
 
   <!-- TAB: OTA & UPDATES -->
@@ -717,6 +738,7 @@ async function loadStats() {
       ip: '192.168.1.50',
       blocked: 84210,
       allowed: 312450,
+      cname: 1420,
       cacheHits: 104520,
       domains: 498536,
       rssi: -38,
@@ -730,6 +752,7 @@ async function loadStats() {
       upstat: 'ok: 498536 domains',
       blocking: true,
       resumeIn: 0,
+      led: true,
       clients: [
         { ip: '192.168.1.102', mac: 'bc:d0:74:1a:2b:3c', label: 'TV Samsung Salón', blocked: 34120, allowed: 5240, banned: false },
         { ip: '192.168.1.105', mac: 'a4:83:e7:89:12:ef', label: 'iPhone Eduardo', blocked: 28410, allowed: 142100, banned: false },
@@ -765,6 +788,7 @@ function renderStats() {
   pauseSelect.style.display = on ? '' : 'none';
 
   stBlocked.textContent = fmt(stats.blocked);
+  stCname.textContent = fmt(stats.cname || 0);
   stAllowed.textContent = fmt(stats.allowed);
   stCache.textContent = fmt(stats.cacheHits || 0);
   stDomains.textContent = fmt(stats.domains);
@@ -791,6 +815,14 @@ function renderStats() {
   sysTemp.textContent = (stats.temp || 0) + ' °C';
   sysRssi.textContent = (stats.rssi || 0) + ' dBm';
   sysUptime.textContent = stats.uptime || '0m';
+
+  let ledOn = stats.led !== false;
+  sysLed.textContent = ledOn ? 'Activo' : 'Apagado';
+  sysLed.style.color = ledOn ? 'var(--success)' : 'var(--text-muted)';
+  ledTitle.textContent = ledOn ? 'LED Onboard Activo' : 'LED Onboard Apagado';
+  ledSubtitle.textContent = ledOn ? 'Encendido con pulsos de actividad' : 'Totalmente apagado (Modo silencioso)';
+  ledToggleBtn.textContent = ledOn ? 'Apagar LED' : 'Encender LED';
+  ledToggleBtn.className = ledOn ? '' : 'btn-primary';
 
   // Render clients table
   let ctBody = document.querySelector('#tblClients tbody');
@@ -844,6 +876,14 @@ function renderStats() {
   ustat.textContent = stats.upstat || '—';
 }
 
+function toggleLed() {
+  let newEn = !(stats.led !== false);
+  fetch('/setled?en=' + (newEn ? '1' : '0')).then(() => {
+    stats.led = newEn;
+    renderStats();
+  });
+}
+
 async function renameClient(ip, currentName) {
   let name = prompt(`Nombre / Alias para ${ip}:`, currentName);
   if (name !== null) {
@@ -861,11 +901,12 @@ async function fetchLog() {
     queryLogs = [
       { t: 1, ip: '192.168.1.102', q: 1, d: 'telemetry.samsungcloud.com', st: 0 },
       { t: 3, ip: '192.168.1.105', q: 28, d: 'googleads.g.doubleclick.net', st: 0 },
-      { t: 5, ip: '192.168.1.110', q: 1, d: 'github.com', st: 3 },
-      { t: 8, ip: '192.168.1.105', q: 1, d: 'web.whatsapp.com', st: 4 },
-      { t: 12, ip: '192.168.1.115', q: 1, d: 'pagead2.googlesyndication.com', st: 0 },
-      { t: 15, ip: '192.168.1.110', q: 1, d: 'stackoverflow.com', st: 2 },
-      { t: 19, ip: '192.168.1.120', q: 1, d: 'playstation.net', st: 3 }
+      { t: 4, ip: '192.168.1.105', q: 1, d: 'track.example-news.com', st: 6 },
+      { t: 7, ip: '192.168.1.110', q: 1, d: 'github.com', st: 3 },
+      { t: 9, ip: '192.168.1.105', q: 1, d: 'web.whatsapp.com', st: 4 },
+      { t: 13, ip: '192.168.1.115', q: 1, d: 'pagead2.googlesyndication.com', st: 0 },
+      { t: 16, ip: '192.168.1.110', q: 1, d: 'stackoverflow.com', st: 2 },
+      { t: 20, ip: '192.168.1.120', q: 1, d: 'playstation.net', st: 3 }
     ];
   }
   renderLogTable();
@@ -875,7 +916,8 @@ function renderLogTable() {
   let filter = logFilter.value;
   let q = (logSearch.value || '').toLowerCase().trim();
   let filtered = queryLogs.filter(item => {
-    if (filter === 'blocked' && (item.st !== 0 && item.st !== 1)) return false;
+    if (filter === 'blocked' && (item.st !== 0 && item.st !== 1 && item.st !== 6)) return false;
+    if (filter === 'cname' && item.st !== 6) return false;
     if (filter === 'allowed' && item.st !== 2) return false;
     if (filter === 'cache' && item.st !== 3) return false;
     if (q && !item.d.toLowerCase().includes(q) && !item.ip.includes(q)) return false;
@@ -885,7 +927,8 @@ function renderLogTable() {
   let tb = document.querySelector('#tblLog tbody');
   tb.innerHTML = filtered.map(item => {
     let badge = '';
-    if (item.st === 0 || item.st === 1) badge = '<span class="badge badge-blocked">Bloqueado</span>';
+    if (item.st === 6) badge = '<span class="badge" style="background:rgba(217,70,239,0.18);color:#f0abfc;border:1px solid rgba(217,70,239,0.35)">🕵️ CNAME Camuflado</span>';
+    else if (item.st === 0 || item.st === 1) badge = '<span class="badge badge-blocked">Bloqueado</span>';
     else if (item.st === 3) badge = '<span class="badge badge-cache">Caché RAM</span>';
     else if (item.st === 4) badge = '<span class="badge badge-whitelist">Lista Blanca</span>';
     else badge = '<span class="badge badge-allowed">Permitido</span>';

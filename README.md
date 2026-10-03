@@ -38,6 +38,10 @@ A **Pi-hole-class DNS ad-blocker** that runs on a **$2 ESP32-C3** plugged straig
    - Dark mode interface with an interactive SVG donut chart (% blocked vs cache vs upstream) and live pause controls.
 10. **Automated Daily Over-The-Air (OTA) Updates**:
     - Built-in GitHub Actions workflow compiles the freshest blocklists every night at 03:00 UTC. The ESP32 silently pulls the update over WiFi without dropping home internet.
+11. **CNAME Cloaking Detection**:
+    - Inspects upstream DNS responses to unmask third-party trackers disguised behind first-party subdomains (e.g. `track.brand.com` -> `tracker.net`), blocking them at the root.
+12. **Physical Status LED Control (GPIO 8)**:
+    - Smart status indicator on the onboard LED: fast blink during WiFi configuration, slow blink when paused, brief off-pulse whenever an ad is sinkholed, and a one-click toggle to silence the LED at night.
 
 ---
 
@@ -121,6 +125,10 @@ Un **bloqueador de anuncios por DNS estilo Pi-hole** que funciona en un microcon
    - Modo oscuro con gráfico Donut interactivo de distribución de tráfico (% bloqueado vs caché vs upstream).
 10. **Actualizaciones Diarias Automáticas (OTA) con GitHub Actions**:
     - Flujo automatizado en GitHub Actions que compila cada noche las listas más recientes y permite que el ESP32 se actualice solo por WiFi.
+11. **Detección de CNAME Cloaking (Rastreo Camuflado)**:
+    - Inspecciona las respuestas de los resolvers para destapar rastreadores de terceros disfrazados tras subdominios del propio sitio web (ej. `track.diario.com` -> `tracker.net`), bloqueándolos en el origen.
+12. **Control de LED Físico de Estado (GPIO 8)**:
+    - Indicador inteligente en el hardware: parpadeo rápido en configuración, parpadeo lento en pausa, micropulso visual al bloquear anuncios y botón de encendido/apagado desde la web para dormitorios.
 
 ---
 
