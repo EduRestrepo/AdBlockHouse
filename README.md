@@ -1,4 +1,4 @@
-# AdBlockHouse 🛡️
+# AdBlock for Home 🛡️
 
 [English](#english) | [Español](#español)
 
