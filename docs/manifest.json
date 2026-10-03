@@ -1,6 +1,6 @@
 {
-  "name": "C3 AdBlocker",
-  "version": "1.0.0",
+  "name": "C3 AdBlock PRO Extreme",
+  "version": "2.0.0",
   "new_install_prompt_erase": true,
   "builds": [
     {
@@ -8,9 +8,8 @@
       "parts": [
         { "path": "bootloader.bin", "offset": 0 },
         { "path": "partitions.bin", "offset": 32768 },
-        { "path": "boot_app0.bin", "offset": 57344 },
         { "path": "firmware.bin", "offset": 65536 },
-        { "path": "littlefs.bin", "offset": 2818048 }
+        { "path": "littlefs.bin", "offset": 1441792 }
       ]
     }
   ]

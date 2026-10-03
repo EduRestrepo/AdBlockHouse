@@ -30,7 +30,7 @@ U64 = (1 << 64) - 1
 # single-app (no-OTA) partition table.
 DEFAULT_SOURCES = [
     'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts',            # base: ads + malware
-    'https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/light.txt',  # Hagezi Light
+    'https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/multi.txt',  # HaGeZi Multi Normal (~500k domains combo)
 ]
 
 def fnv(b: bytes) -> int:

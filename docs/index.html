@@ -30,30 +30,30 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🛡️ <span class="g">C3 AdBlocker</span></h1>
-  <p class="sub">A network-wide DNS ad-blocker on a <span class="price">$2</span> ESP32-C3 — 141,000+ domains, no PSRAM. Flash it right here, no toolchain needed.</p>
+  <h1>🛡️ <span class="g">C3 AdBlock PRO Extreme</span></h1>
+  <p class="sub">Network-wide DNS ad-blocker on a <span class="price">$2</span> ESP32-C3 — <b>500,000 domains</b> (StevenBlack + HaGeZi Multi), RAM Checkpoint Index, In-Memory DNS Cache, Whitelist & Live Log. Flash directly from your browser.</p>
 
   <div class="card" style="text-align:center">
     <p style="margin-top:0">Plug your ESP32-C3 into this computer, then:</p>
     <esp-web-install-button manifest="./manifest.json">
-      <button slot="activate" style="font:600 17px system-ui;padding:14px 26px;border:0;border-radius:8px;background:#3fb950;color:#000;cursor:pointer">⚡ Connect &amp; Install</button>
+      <button slot="activate" style="font:600 17px system-ui;padding:14px 26px;border:0;border-radius:8px;background:#38bdf8;color:#000;cursor:pointer">⚡ Connect &amp; Install 500k PRO</button>
       <span slot="unsupported" class="unsupported">Your browser can't flash — use <b>Chrome</b> or <b>Edge</b> on a desktop.</span>
       <span slot="not-allowed" class="unsupported">You need to allow the serial port.</span>
     </esp-web-install-button>
     <div class="flags">
       <span class="flag">Chrome / Edge · desktop</span>
-      <span class="flag">~30 seconds</span>
-      <span class="flag">blocklist included</span>
+      <span class="flag">~45 seconds</span>
+      <span class="flag">500k blocklist included</span>
     </div>
   </div>
 
   <div class="card">
     <b>What happens</b>
     <ol>
-      <li>Click <b>Connect &amp; Install</b> and pick your ESP32-C3's serial port.</li>
-      <li>It flashes the firmware + a 141k-domain blocklist (~30s).</li>
+      <li>Click <b>Connect &amp; Install 500k PRO</b> and pick your ESP32-C3's serial port.</li>
+      <li>It flashes the firmware + a 500,000-domain blocklist (~45s).</li>
       <li>After it reboots, it makes a WiFi network called <code>C3-AdBlock-XXXX</code> — join it from your phone, pick your WiFi, type the password.</li>
-      <li>Set it as your router's secondary DNS (or per-device), and ads are blocked network-wide. Dashboard at <code>c3adblock.local</code>.</li>
+      <li>Plug it into your router's USB port and set it as your router's DNS. Dashboard at <code>c3adblock.local</code>.</li>
     </ol>
     <p class="note">No WiFi credentials are baked into this build — you set them on-device, privately.</p>
   </div>

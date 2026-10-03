@@ -1,0 +1,38 @@
+name: Daily Blocklist Build & Release
+
+on:
+  schedule:
+    # Runs automatically every day at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build Blocklist Hash Blob (500k domains)
+        run: |
+          python3 tools/build_blocklist.py blocklist.bin \
+            https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts \
+            https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/multi.txt
+
+      - name: Release or Update Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Daily Blocklist Update
+          body: "Auto-generated daily blocklist binary for C3 AdBlock PRO Extreme (~500,000 domains)."
+          files: blocklist.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
