@@ -27,10 +27,12 @@ U64 = (1 << 64) - 1
 # Daily driver that FITS alongside dual-OTA firmware slots (~250k domain budget):
 # ads + trackers + malware, WhatsApp/social keep working. ~140k domains / 0.67 MB.
 # Want more (up to ~250k)? swap light.txt -> pro.txt is 370k and ONLY fits the
-# single-app (no-OTA) partition table.
+MAX_FLASH_BYTES = 2700000             # LittleFS partition limit (0x2A0000 = 2.75 MB)
+MAX_CAPACITY_DOMAINS = MAX_FLASH_BYTES // HASH_BYTES  # ~540k domains max
+
 DEFAULT_SOURCES = [
     'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts',            # base: ads + malware
-    'https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/multi.txt',  # HaGeZi Multi Normal (~500k domains combo)
+    'https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/pro.plus.txt',  # HaGeZi Multi PRO++ (~500k domains combo)
 ]
 
 def fnv(b: bytes) -> int:
@@ -75,6 +77,11 @@ def main():
     hashes = sorted(fnv(d.encode()) for d in domains)
     collisions = len(hashes) - len(set(hashes))
     uniq = sorted(set(hashes))                       # one entry per distinct hash
+
+    if len(uniq) > MAX_CAPACITY_DOMAINS:
+        print(f'  !! WARNING: {len(uniq):,} entries exceeds LittleFS capacity ({MAX_CAPACITY_DOMAINS:,}). Capping at limit.', file=sys.stderr)
+        uniq = uniq[:MAX_CAPACITY_DOMAINS]
+
     with open(out, 'wb') as f:
         for h in uniq:
             f.write(h.to_bytes(HASH_BYTES, 'little'))

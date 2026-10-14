@@ -25,7 +25,7 @@ jobs:
         run: |
           python3 tools/build_blocklist.py blocklist.bin \
             https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts \
-            https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/multi.txt
+            https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/pro.plus.txt
 
       - name: Release or Update Asset
         uses: softprops/action-gh-release@v2
