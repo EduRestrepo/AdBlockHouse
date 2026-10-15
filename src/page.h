@@ -397,6 +397,217 @@ button.btn-sm {
 .editable-alias:hover {
   color: var(--primary);
 }
+
+/* Two Column Responsive Grid */
+.two-col-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* Scrollable Container for Lists (Whitelist / Blacklist) */
+.list-scroll-box {
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  background: rgba(11, 15, 25, 0.7);
+  -webkit-overflow-scrolling: touch;
+}
+.list-scroll-box::-webkit-scrollbar {
+  width: 6px;
+}
+.list-scroll-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+.list-scroll-box::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+.list-scroll-box::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+.list-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.list-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #111726;
+  border-bottom: 1px solid var(--surface-border);
+}
+.list-table td {
+  padding: 10px 12px;
+}
+.list-table td:first-child {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  padding-right: 8px;
+}
+.list-table td:last-child {
+  width: 76px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Responsive Table Wrapper */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Log toolbar */
+.log-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Mobile & Tablet Responsive Overhaul */
+@media (max-width: 768px) {
+  .two-col-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  header {
+    padding: 10px 14px;
+  }
+  .brand {
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+  .brand h1 {
+    font-size: 15px;
+  }
+  .badge-pro {
+    display: none;
+  }
+  #headerIP {
+    display: none;
+  }
+  .status-pill {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .container {
+    padding: 14px 10px;
+  }
+  .nav-tabs {
+    gap: 4px;
+    margin-bottom: 16px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .pause-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .pause-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+  .pause-actions select {
+    flex: 1;
+    min-height: 38px;
+  }
+  .pause-actions button {
+    min-height: 38px;
+  }
+  .grid-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    padding: 12px 14px;
+  }
+  .stat-value {
+    font-size: 22px;
+  }
+  .stat-sub {
+    font-size: 10px;
+  }
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .donut-chart {
+    width: 140px;
+    height: 140px;
+  }
+  .sys-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .sys-item {
+    padding: 10px 12px;
+  }
+  .sys-val {
+    font-size: 13px;
+  }
+  .card {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+  }
+  .log-toolbar {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .log-toolbar input,
+  .log-toolbar select,
+  .log-toolbar button {
+    width: 100%;
+    min-height: 38px;
+  }
+  .action-bar {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .action-bar input {
+    flex: 1;
+    min-width: 0;
+    min-height: 38px;
+  }
+  .action-bar button {
+    min-height: 38px;
+    white-space: nowrap;
+  }
+  .list-scroll-box {
+    max-height: 280px;
+  }
+}
 </style>
 </head>
 <body>
@@ -437,7 +648,7 @@ button.btn-sm {
         <div id="pauseSubtitle" style="font-size:12px;color:var(--text-muted)">Las consultas DNS son filtradas en menos de 1 ms</div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;align-items:center">
+    <div class="pause-actions">
       <select id="pauseSelect">
         <option value="30">30 segundos</option>
         <option value="300" selected>5 minutos</option>
@@ -535,7 +746,7 @@ button.btn-sm {
     <div class="card">
       <div class="card-title">
         <span>Registro de Consultas en Tiempo Real (Últimas peticiones)</span>
-        <div style="display:flex;gap:8px">
+        <div class="log-toolbar">
           <input type="text" id="logSearch" placeholder="Filtrar por dominio o IP..." onkeyup="renderLogTable()">
           <select id="logFilter" onchange="renderLogTable()">
             <option value="all">Todas</option>
@@ -547,7 +758,7 @@ button.btn-sm {
           <button onclick="fetchLog()">🔄 Actualizar</button>
         </div>
       </div>
-      <div style="overflow-x:auto">
+      <div class="table-responsive">
         <table id="tblLog">
           <thead>
             <tr>
@@ -572,7 +783,7 @@ button.btn-sm {
         <span>Dispositivos Conectados en la Red</span>
         <span style="font-size:12px;color:var(--text-muted)">Haz clic en el alias para poner nombre a tus dispositivos</span>
       </div>
-      <div style="overflow-x:auto">
+      <div class="table-responsive">
         <table id="tblClients">
           <thead>
             <tr>
@@ -593,37 +804,43 @@ button.btn-sm {
 
   <!-- TAB: LISTS (BLOCKLIST & WHITELIST) -->
   <div id="pane-lists" class="tab-pane">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="two-col-grid">
       <!-- Whitelist -->
       <div class="card">
         <div class="card-title" style="color:#38bdf8">
           <span>🛡️ Lista Blanca (Whitelist)</span>
+          <span class="badge badge-whitelist" id="badgeAllowCnt">0</span>
         </div>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Los dominios aquí NUNCA serán bloqueados, incluso si están en listas públicas.</p>
         <div class="action-bar">
-          <input type="text" id="inAllow" placeholder="ejemplo.com" style="flex:1">
+          <input type="text" id="inAllow" placeholder="ejemplo.com" style="flex:1" onkeydown="if(event.key==='Enter')addAllow()">
           <button class="btn-primary" onclick="addAllow()">+ Permitir</button>
         </div>
-        <table id="tblAllow">
-          <thead><tr><th>Dominio Excluido</th><th style="text-align:right">Quitar</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="list-scroll-box">
+          <table id="tblAllow" class="list-table">
+            <thead><tr><th>Dominio Excluido</th><th style="text-align:right">Quitar</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Blacklist -->
       <div class="card">
         <div class="card-title" style="color:#ef4444">
           <span>🚫 Lista Negra Personalizada</span>
+          <span class="badge badge-blocked" id="badgeBlockCnt">0</span>
         </div>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Dominios que deseas bloquear de inmediato en toda tu red.</p>
         <div class="action-bar">
-          <input type="text" id="inBlock" placeholder="anuncios.ejemplo.com" style="flex:1">
+          <input type="text" id="inBlock" placeholder="anuncios.ejemplo.com" style="flex:1" onkeydown="if(event.key==='Enter')addCustom()">
           <button class="btn-danger" onclick="addCustom()">+ Bloquear</button>
         </div>
-        <table id="tblBlock">
-          <thead><tr><th>Dominio Bloqueado</th><th style="text-align:right">Quitar</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="list-scroll-box">
+          <table id="tblBlock" class="list-table">
+            <thead><tr><th>Dominio Bloqueado</th><th style="text-align:right">Quitar</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -633,7 +850,7 @@ button.btn-sm {
     <div class="card">
       <div class="card-title">Configuración de Servidores DNS Upstream</div>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Configura los resolvers hacia donde se reenviarán las consultas permitidas con tolerancia a fallos.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="two-col-grid" style="margin-bottom:16px">
         <div>
           <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">DNS Primario</label>
           <input type="text" id="dnsPrimary" placeholder="1.1.1.1" style="width:100%">
@@ -678,7 +895,7 @@ button.btn-sm {
 
   <!-- TAB: OTA & UPDATES -->
   <div id="pane-ota" class="tab-pane">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="two-col-grid">
       <!-- Firmware OTA -->
       <div class="card">
         <div class="card-title">Actualizar Firmware (WiFi OTA)</div>
@@ -848,26 +1065,32 @@ function renderStats() {
   `).join('') || '<tr><td colspan="7" style="color:var(--text-muted);text-align:center">Sin clientes registrados aún</td></tr>';
 
   // Render custom blocklist
+  let cList = stats.custom || [];
   let tblB = document.querySelector('#tblBlock tbody');
-  tblB.innerHTML = (stats.custom || []).map(d => `
+  tblB.innerHTML = cList.map(d => `
     <tr>
       <td class="mono">${d}</td>
       <td style="text-align:right">
         <button class="btn-sm btn-danger" onclick="fetch('/unblock?d='+encodeURIComponent('${d}')).then(loadStats)">Quitar</button>
       </td>
     </tr>
-  `).join('') || '<tr><td colspan="2" style="color:var(--text-muted)">Ninguno</td></tr>';
+  `).join('') || '<tr><td colspan="2" style="color:var(--text-muted);text-align:center">Ninguno</td></tr>';
+  let badgeB = document.getElementById('badgeBlockCnt');
+  if (badgeB) badgeB.textContent = cList.length;
 
   // Render whitelist
+  let wList = stats.whitelist || [];
   let tblA = document.querySelector('#tblAllow tbody');
-  tblA.innerHTML = (stats.whitelist || []).map(d => `
+  tblA.innerHTML = wList.map(d => `
     <tr>
       <td class="mono">${d}</td>
       <td style="text-align:right">
         <button class="btn-sm btn-danger" onclick="fetch('/unallow?d='+encodeURIComponent('${d}')).then(loadStats)">Quitar</button>
       </td>
     </tr>
-  `).join('') || '<tr><td colspan="2" style="color:var(--text-muted)">Ninguno</td></tr>';
+  `).join('') || '<tr><td colspan="2" style="color:var(--text-muted);text-align:center">Ninguno</td></tr>';
+  let badgeA = document.getElementById('badgeAllowCnt');
+  if (badgeA) badgeA.textContent = wList.length;
 
   if (document.activeElement != uurl) uurl.value = stats.upurl || '';
   if (document.activeElement != uiv) uiv.value = stats.upiv || 24;
