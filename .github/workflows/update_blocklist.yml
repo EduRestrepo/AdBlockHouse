@@ -21,18 +21,18 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Build Blocklist Hash Blob (500k domains)
+      - name: Build Blocklist Hash Blob (HaGeZi Multi PRO balanced)
         run: |
           python3 tools/build_blocklist.py blocklist.bin \
             https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts \
-            https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/pro.plus.txt
+            https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/pro.txt
 
       - name: Release or Update Asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: Daily Blocklist Update
-          body: "Auto-generated daily blocklist binary for C3 AdBlock PRO Extreme (~500,000 domains)."
+          body: "Auto-generated daily blocklist binary for C3 AdBlock PRO (HaGeZi Multi PRO balanced)."
           files: blocklist.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

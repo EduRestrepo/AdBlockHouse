@@ -32,8 +32,18 @@ MAX_CAPACITY_DOMAINS = MAX_FLASH_BYTES // HASH_BYTES  # ~540k domains max
 
 DEFAULT_SOURCES = [
     'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts',            # base: ads + malware
-    'https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/pro.plus.txt',  # HaGeZi Multi PRO++ (~500k domains combo)
+    'https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/pro.txt',  # HaGeZi Multi PRO balanced
 ]
+
+# Explicit exclusions for critical news/media paywall & user session systems
+DEFAULT_EXCLUSIONS = {
+    'piano.io',                 # Piano.io paywall & reading engine (El Espectador, etc.)
+    'cdn.piano.io',
+    'buy.piano.io',
+    'mas.protecmedia.com',      # Protecmedia MAS: User auth & paywall (El Colombiano, etc.)
+    'protecmedia.com',
+}
+
 
 def fnv(b: bytes) -> int:
     h = FNV_OFFSET
@@ -71,7 +81,7 @@ def main():
                 else parts[0] if len(parts) == 1 else None
             if d:
                 d = norm(d)
-                if '.' in d and ' ' not in d:
+                if '.' in d and ' ' not in d and d not in DEFAULT_EXCLUSIONS:
                     domains.add(d)
 
     hashes = sorted(fnv(d.encode()) for d in domains)
