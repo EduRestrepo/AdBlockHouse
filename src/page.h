@@ -636,11 +636,11 @@ button.btn-sm {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div>
           <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">DNS Primario</label>
-          <input type="text" id="dnsPrimary" placeholder="9.9.9.9" style="width:100%">
+          <input type="text" id="dnsPrimary" placeholder="1.1.1.1" style="width:100%">
         </div>
         <div>
           <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">DNS Secundario (Fallback)</label>
-          <input type="text" id="dnsSecondary" placeholder="1.1.1.1" style="width:100%">
+          <input type="text" id="dnsSecondary" placeholder="8.8.8.8" style="width:100%">
         </div>
       </div>
       <button class="btn-primary" onclick="saveUpstreamDNS()">Guardar Servidores DNS</button>

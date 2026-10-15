@@ -26,8 +26,8 @@
 #endif
 
 // ---- Configurations & Constants ----
-static IPAddress upstreamPrimary(9, 9, 9, 9);    // Default: Quad9
-static IPAddress upstreamSecondary(1, 1, 1, 1);  // Default: Cloudflare
+static IPAddress upstreamPrimary(1, 1, 1, 1);    // Default: Cloudflare (ultra-low latency)
+static IPAddress upstreamSecondary(8, 8, 8, 8);  // Default: Google
 static const uint16_t DNS_PORT = 53;
 static const char* BLOCKLIST_PATH = "/blocklist.bin";
 static const int HASH_BYTES = 5;
@@ -128,7 +128,7 @@ struct DnsCacheEntry {
   uint16_t len;
   uint8_t pkt[180];
 };
-static const int CACHE_SIZE = 96;
+static const int CACHE_SIZE = 256;
 static DnsCacheEntry dnsCache[CACHE_SIZE];
 static int cacheNextIdx = 0;
 
@@ -658,7 +658,7 @@ static int buildBlocked(int qend, uint16_t qtype) {
 
 // Dual Upstream DNS forwarding with fast failover
 static int forwardUpstream(int qlen) {
-  // Primary upstream attempt (Quad9 default, 350ms timeout)
+  // Primary upstream attempt (Cloudflare default 1.1.1.1, 350ms timeout)
   upstreamCli.beginPacket(upstreamPrimary, 53);
   upstreamCli.write(buf, qlen);
   upstreamCli.endPacket();
@@ -670,7 +670,7 @@ static int forwardUpstream(int qlen) {
     delay(1);
   }
 
-  // Fallback to secondary upstream (Cloudflare default, 450ms timeout)
+  // Fallback to secondary upstream (Google default 8.8.8.8, 450ms timeout)
   upstreamCli.beginPacket(upstreamSecondary, 53);
   upstreamCli.write(buf, qlen);
   upstreamCli.endPacket();
