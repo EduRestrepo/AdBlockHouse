@@ -608,6 +608,19 @@ button.btn-sm {
     max-height: 280px;
   }
 }
+.hist-chart { display:flex; align-items:flex-end; gap:3px; height:140px; padding-top:8px; }
+.hist-col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; height:100%; min-width:0; position:relative; }
+.hist-col .seg-b { background:#ef4444; border-radius:3px 3px 0 0; min-height:0; }
+.hist-col .seg-a { background:#10b981; min-height:0; }
+.hist-col.empty .seg-a { background:#1e293b; height:2px; }
+.hist-axis { display:flex; gap:3px; font-size:10px; color:var(--text-muted); margin-top:4px; }
+.hist-axis span { flex:1; text-align:center; overflow:visible; white-space:nowrap; }
+.top-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--surface-border); font-size:13px; }
+.top-row:last-child { border-bottom:0; }
+.top-row .top-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:monospace; }
+.top-row .top-n { color:var(--text-muted); font-variant-numeric:tabular-nums; }
+.feat-row { display:flex; align-items:center; justify-content:space-between; gap:14px; background:#0d1322; padding:14px 18px; border-radius:10px; border:1px solid var(--surface-border); margin-bottom:10px; }
+.feat-row input[type=checkbox] { width:22px; height:22px; flex:none; accent-color:#38bdf8; }
 </style>
 </head>
 <body>
@@ -616,7 +629,7 @@ button.btn-sm {
   <div class="brand">
     <div class="logo-icon">🛡️</div>
     <div>
-      <h1>AdBlock <span>House</span> <span class="badge-pro">PRO 500k</span></h1>
+      <h1>AdBlock <span>House</span> <span class="badge-pro" id="badgePro">PRO</span></h1>
     </div>
   </div>
   <div class="header-actions">
@@ -736,8 +749,43 @@ button.btn-sm {
             <div class="sys-label">Velocidad Búsqueda</div>
             <div class="sys-val" style="color:var(--success)">~1 ms (RAM Index)</div>
           </div>
+          <div class="sys-item">
+            <div class="sys-label">Latencia DNS (1º / 2º)</div>
+            <div id="sysLat" class="sys-val">— ms</div>
+          </div>
+          <div class="sys-item">
+            <div class="sys-label">RAM Mínima Histórica</div>
+            <div id="sysMinHeap" class="sys-val">0 KB</div>
+          </div>
+          <div class="sys-item">
+            <div class="sys-label">Último Reinicio</div>
+            <div id="sysRst" class="sys-val" style="font-size:13px">—</div>
+          </div>
+          <div class="sys-item">
+            <div class="sys-label">Reinicios Automáticos</div>
+            <div id="sysRstc" class="sys-val">0</div>
+          </div>
         </div>
       </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-title">Actividad últimas 24 h
+          <span style="font-size:11px;font-weight:400;color:var(--text-muted)"><span style="color:#ef4444">■</span> bloqueadas <span style="color:#10b981">■</span> permitidas</span>
+        </div>
+        <div id="histChart" class="hist-chart"></div>
+        <div id="histAxis" class="hist-axis"></div>
+        <div id="histNote" style="font-size:12px;color:var(--text-muted);margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top 10 Bloqueados</div>
+        <div id="topBlocked"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 10 Más Consultados</div>
+      <div id="topAllowed"></div>
     </div>
   </div>
 
@@ -754,6 +802,7 @@ button.btn-sm {
             <option value="cname">Solo CNAME Camuflados</option>
             <option value="allowed">Solo Permitidas</option>
             <option value="cache">Solo Caché</option>
+            <option value="fail">Sin respuesta upstream</option>
           </select>
           <button onclick="fetchLog()">🔄 Actualizar</button>
         </div>
@@ -811,9 +860,9 @@ button.btn-sm {
           <span>🛡️ Lista Blanca (Whitelist)</span>
           <span class="badge badge-whitelist" id="badgeAllowCnt">0</span>
         </div>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Los dominios aquí NUNCA serán bloqueados, incluso si están en listas públicas.</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Los dominios aquí NUNCA serán bloqueados, incluso si están en listas públicas. Admite comodines: <code>*</code> = cualquier texto, <code>?</code> = un carácter (el patrón debe coincidir con el dominio completo).</p>
         <div class="action-bar">
-          <input type="text" id="inAllow" placeholder="ejemplo.com" style="flex:1" onkeydown="if(event.key==='Enter')addAllow()">
+          <input type="text" id="inAllow" placeholder="ejemplo.com o *.ejemplo.*" style="flex:1" onkeydown="if(event.key==='Enter')addAllow()">
           <button class="btn-primary" onclick="addAllow()">+ Permitir</button>
         </div>
         <div class="list-scroll-box">
@@ -830,9 +879,9 @@ button.btn-sm {
           <span>🚫 Lista Negra Personalizada</span>
           <span class="badge badge-blocked" id="badgeBlockCnt">0</span>
         </div>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Dominios que deseas bloquear de inmediato en toda tu red.</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Dominios que deseas bloquear de inmediato en toda tu red. Admite comodines, p. ej. <code>*.tracker.*</code>.</p>
         <div class="action-bar">
-          <input type="text" id="inBlock" placeholder="anuncios.ejemplo.com" style="flex:1" onkeydown="if(event.key==='Enter')addCustom()">
+          <input type="text" id="inBlock" placeholder="anuncios.ejemplo.com o ads*.tracker.*" style="flex:1" onkeydown="if(event.key==='Enter')addCustom()">
           <button class="btn-danger" onclick="addCustom()">+ Bloquear</button>
         </div>
         <div class="list-scroll-box">
@@ -865,16 +914,47 @@ button.btn-sm {
 
     <div class="card">
       <div class="card-title">Auto-Actualización Remota de Listas</div>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">El dispositivo descargará periódicamente una lista binaria precompilada sin intervención.</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">El dispositivo comprueba periódicamente la lista publicada en GitHub (por defecto) y solo la descarga si cambió. La descarga es segura: la lista actual se conserva hasta validar la nueva, y si la descarga se interrumpe se reintenta (5 → 15 → 60 min). Deja la URL vacía para desactivar.</p>
       <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <input type="text" id="uurl" placeholder="https://servidor.com/blocklist.bin" style="flex:1;min-width:250px">
+        <input type="text" id="uurl" placeholder="https://github.com/EduRestrepo/AdBlockHouse/releases/latest/download/blocklist.bin" style="flex:1;min-width:250px">
         <span>cada</span>
         <input type="number" id="uiv" value="24" min="1" max="168" style="width:70px">
         <span>horas</span>
         <button class="btn-primary" onclick="saveUpd()">Guardar</button>
         <button onclick="fetchNow()">Descargar Ahora</button>
+        <button onclick="resetUpdUrl()">URL por defecto</button>
       </div>
       <div style="font-size:12px;color:var(--text-muted)">Estado último intento: <span id="ustat" style="color:var(--text)">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Funciones de Protección</div>
+      <div class="feat-row">
+        <div>
+          <b>🔍 SafeSearch forzado</b>
+          <div style="font-size:12px;color:var(--text-muted)">Google, YouTube y Bing devuelven resultados filtrados en toda la red. Desactivado por defecto.</div>
+        </div>
+        <input type="checkbox" id="featSS" onchange="setFeature('ss', this.checked)">
+      </div>
+      <div class="feat-row">
+        <div>
+          <b>🚧 Bloquear DNS cifrado (DoH/DoT)</b>
+          <div style="font-size:12px;color:var(--text-muted)">Impide que navegadores y apps esquiven el filtro con resolvers propios (Firefox, Chrome, Android «DNS privado»). Si un dispositivo usa DNS privado estricto, perderá la conexión hasta desactivarlo allí. Desactivado por defecto.</div>
+        </div>
+        <input type="checkbox" id="featDoh" onchange="setFeature('doh', this.checked)">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Copia de Seguridad y Estadísticas</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Exporta o restaura listas, alias, dispositivos baneados, DNS y opciones en un archivo de texto.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn-primary" onclick="location.href='/export.txt'">⬇️ Exportar Configuración</button>
+        <button onclick="cfgFile.click()">⬆️ Importar Configuración</button>
+        <input type="file" id="cfgFile" accept=".txt" style="display:none" onchange="importCfg(this)">
+        <button class="btn-danger" onclick="if(confirm('¿Poner a cero contadores, tops y gráfico?')) fetch('/resetstats').then(loadStats)">🧹 Reiniciar Estadísticas</button>
+        <span id="cfgMsg" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
     </div>
 
     <div class="card">
@@ -913,6 +993,9 @@ button.btn-sm {
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Carga una nueva lista binaria generada con <code>tools/build_blocklist.py</code> sin usar cable USB.</p>
         <form id="blForm">
           <input type="file" id="blFile" accept=".bin" style="width:100%;margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);margin-bottom:10px">
+            <input type="checkbox" id="blForce"> Reemplazo forzado (borra la lista actual antes; necesario si la lista nueva no cabe junto a la actual)
+          </label>
           <button type="submit" class="btn-primary">Subir Lista</button>
           <span id="blMsg" style="margin-left:10px;font-size:12px;color:var(--text-muted)"></span>
         </form>
@@ -934,6 +1017,10 @@ button.btn-sm {
 <script>
 let stats = {};
 let queryLogs = [];
+let lists = { custom: [], whitelist: [] };
+let lastLv = -1;
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function setTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -946,18 +1033,20 @@ function setTab(name) {
 function fmt(n) { return (n || 0).toLocaleString(); }
 
 async function loadStats() {
+  let live = true;
   try {
     let r = await fetch('/stats.json');
     if (!r.ok) throw new Error();
     stats = await r.json();
   } catch (e) {
+    live = false;
     stats = {
       ip: '192.168.1.50',
       blocked: 84210,
       allowed: 312450,
       cname: 1420,
       cacheHits: 104520,
-      domains: 498536,
+      domains: 380208,
       rssi: -38,
       temp: 45.8,
       heap: 198420,
@@ -966,7 +1055,13 @@ async function loadStats() {
       dnsSec: '1.1.1.1',
       upurl: 'https://github.com/EduRestrepo/AdBlockHouse/releases/latest/download/blocklist.bin',
       upiv: 24,
-      upstat: 'ok: 498536 domains',
+      upstat: 'actualizada: 380208 dominios',
+      latPri: 14, latSec: 22, minHeap: 61000, rst: 'encendido', rstc: 0, ss: false, doh: false,
+      top: {
+        b: [['googleads.g.doubleclick.net', 4210], ['telemetry.samsungcloud.com', 2980], ['ads.tiktok.com', 1750]],
+        a: [['github.com', 5120], ['web.whatsapp.com', 3900], ['stackoverflow.com', 1210]]
+      },
+      hist: Array.from({length: 24}, (_, i) => [Math.floor(Date.now() / 3600000) - 23 + i, 200 + ((i * 37) % 180), 700 + ((i * 91) % 500)]),
       blocking: true,
       resumeIn: 0,
       led: true,
@@ -990,6 +1085,16 @@ async function loadStats() {
       ]
     };
   }
+  if (live) {
+    if (stats.lv !== lastLv) {
+      try {
+        let r = await fetch('/lists.json');
+        if (r.ok) { lists = await r.json(); lastLv = stats.lv; }
+      } catch (e) {}
+    }
+  } else {
+    lists = { custom: stats.custom || [], whitelist: stats.whitelist || [] };
+  }
   renderStats();
 }
 
@@ -1009,6 +1114,7 @@ function renderStats() {
   stAllowed.textContent = fmt(stats.allowed);
   stCache.textContent = fmt(stats.cacheHits || 0);
   stDomains.textContent = fmt(stats.domains);
+  document.getElementById('badgePro').textContent = stats.domains ? 'PRO ' + (stats.domains >= 1000 ? Math.round(stats.domains / 1000) + 'k' : stats.domains) : 'PRO';
 
   let total = (stats.blocked || 0) + (stats.allowed || 0) + (stats.cacheHits || 0);
   let bPct = total ? ((stats.blocked / total) * 100).toFixed(1) : 0;
@@ -1046,8 +1152,8 @@ function renderStats() {
   ctBody.innerHTML = (stats.clients || []).sort((a,b) => (b.blocked + b.allowed) - (a.blocked + a.allowed)).map(c => `
     <tr>
       <td>
-        <span class="editable-alias" onclick="renameClient('${c.ip}', '${c.label || ''}')">
-          <b>${c.label || 'Dispositivo'}</b> ✎
+        <span class="editable-alias" data-ip="${esc(c.ip)}" data-name="${esc(c.label || '')}" onclick="renameClient(this.dataset.ip, this.dataset.name)">
+          <b>${esc(c.label || 'Dispositivo')}</b> ✎
         </span>
         ${c.banned ? '<span class="badge badge-blocked" style="margin-left:6px">BANEADO</span>' : ''}
       </td>
@@ -1065,13 +1171,13 @@ function renderStats() {
   `).join('') || '<tr><td colspan="7" style="color:var(--text-muted);text-align:center">Sin clientes registrados aún</td></tr>';
 
   // Render custom blocklist
-  let cList = stats.custom || [];
+  let cList = lists.custom || [];
   let tblB = document.querySelector('#tblBlock tbody');
   tblB.innerHTML = cList.map(d => `
     <tr>
-      <td class="mono">${d}</td>
+      <td class="mono">${esc(d)}</td>
       <td style="text-align:right">
-        <button class="btn-sm btn-danger" onclick="fetch('/unblock?d='+encodeURIComponent('${d}')).then(loadStats)">Quitar</button>
+        <button class="btn-sm btn-danger" data-d="${esc(d)}" onclick="fetch('/unblock?d='+encodeURIComponent(this.dataset.d)).then(loadStats)">Quitar</button>
       </td>
     </tr>
   `).join('') || '<tr><td colspan="2" style="color:var(--text-muted);text-align:center">Ninguno</td></tr>';
@@ -1079,24 +1185,88 @@ function renderStats() {
   if (badgeB) badgeB.textContent = cList.length;
 
   // Render whitelist
-  let wList = stats.whitelist || [];
+  let wList = lists.whitelist || [];
   let tblA = document.querySelector('#tblAllow tbody');
   tblA.innerHTML = wList.map(d => `
     <tr>
-      <td class="mono">${d}</td>
+      <td class="mono">${esc(d)}</td>
       <td style="text-align:right">
-        <button class="btn-sm btn-danger" onclick="fetch('/unallow?d='+encodeURIComponent('${d}')).then(loadStats)">Quitar</button>
+        <button class="btn-sm btn-danger" data-d="${esc(d)}" onclick="fetch('/unallow?d='+encodeURIComponent(this.dataset.d)).then(loadStats)">Quitar</button>
       </td>
     </tr>
   `).join('') || '<tr><td colspan="2" style="color:var(--text-muted);text-align:center">Ninguno</td></tr>';
   let badgeA = document.getElementById('badgeAllowCnt');
   if (badgeA) badgeA.textContent = wList.length;
 
+  sysLat.textContent = (stats.latPri || 0) + ' / ' + (stats.latSec || 0) + ' ms';
+  sysMinHeap.textContent = Math.round((stats.minHeap || 0) / 1024) + ' KB';
+  sysRst.textContent = stats.rst || '—';
+  sysRstc.textContent = stats.rstc || 0;
+  sysRstc.style.color = stats.rstc ? 'var(--warning, #f59e0b)' : '';
+  if (document.activeElement != featSS) featSS.checked = !!stats.ss;
+  if (document.activeElement != featDoh) featDoh.checked = !!stats.doh;
+  renderHist();
+  renderTop(topBlocked, (stats.top || {}).b, true);
+  renderTop(topAllowed, (stats.top || {}).a, false);
+
   if (document.activeElement != uurl) uurl.value = stats.upurl || '';
   if (document.activeElement != uiv) uiv.value = stats.upiv || 24;
   if (document.activeElement != dnsPrimary && stats.dnsPri) dnsPrimary.value = stats.dnsPri;
   if (document.activeElement != dnsSecondary && stats.dnsSec) dnsSecondary.value = stats.dnsSec;
   ustat.textContent = stats.upstat || '—';
+}
+
+function renderHist() {
+  let h = stats.hist || [];
+  let nowH = Math.floor(Date.now() / 3600000);
+  let map = {};
+  h.forEach(x => { map[x[0]] = x; });
+  let max = 1;
+  for (let i = 23; i >= 0; i--) { let x = map[nowH - i]; if (x) max = Math.max(max, x[1] + x[2]); }
+  let bars = '', axis = '';
+  for (let i = 23; i >= 0; i--) {
+    let hr = nowH - i, x = map[hr] || [hr, 0, 0];
+    let hb = (x[1] / max) * 100, ha = (x[2] / max) * 100;
+    let when = new Date(hr * 3600000);
+    let tip = when.getHours() + ':00 — ' + x[1] + ' bloqueadas, ' + x[2] + ' permitidas';
+    bars += `<div class="hist-col${x[1] + x[2] ? '' : ' empty'}" title="${tip}"><div class="seg-b" style="height:${hb}%"></div><div class="seg-a" style="height:${ha}%"></div></div>`;
+    axis += `<span>${i % 6 === 0 ? when.getHours() + 'h' : ''}</span>`;
+  }
+  histChart.innerHTML = bars;
+  histAxis.innerHTML = axis;
+  histNote.textContent = h.length ? '' : 'Sin datos todavía (se rellena cuando el dispositivo sincroniza la hora por Internet).';
+}
+
+function renderTop(el, arr, blocked) {
+  arr = arr || [];
+  el.innerHTML = arr.map(x => `
+    <div class="top-row">
+      <span class="top-name" title="${esc(x[0])}">${esc(x[0])}</span>
+      <span class="top-n">${fmt(x[1])}</span>
+      <button class="btn-sm ${blocked ? '' : 'btn-danger'}" data-d="${esc(x[0])}" onclick="${blocked ? 'quickAllow' : 'quickBlock'}(this.dataset.d)">${blocked ? '+ Whitelist' : '+ Bloquear'}</button>
+    </div>`).join('') || '<div style="color:var(--text-muted);font-size:13px">Sin datos todavía</div>';
+}
+
+function setFeature(k, v) {
+  fetch('/setfeature?k=' + k + '&v=' + (v ? 1 : 0)).then(loadStats);
+}
+
+async function importCfg(inp) {
+  let f = inp.files[0];
+  if (!f) return;
+  if (!confirm('Esto reemplaza listas, alias, baneos y ajustes por los del archivo. ¿Continuar?')) { inp.value = ''; return; }
+  try {
+    let txt = await f.text();
+    let r = await fetch('/importcfg', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: txt });
+    cfgMsg.textContent = r.ok ? '✓ ' + await r.text() : '✗ ' + await r.text();
+  } catch (_) { cfgMsg.textContent = '✗ Error al importar'; }
+  inp.value = '';
+  loadStats();
+}
+
+function resetUpdUrl() {
+  uurl.value = 'https://github.com/EduRestrepo/AdBlockHouse/releases/latest/download/blocklist.bin';
+  saveUpd();
 }
 
 function toggleLed() {
@@ -1139,10 +1309,11 @@ function renderLogTable() {
   let filter = logFilter.value;
   let q = (logSearch.value || '').toLowerCase().trim();
   let filtered = queryLogs.filter(item => {
-    if (filter === 'blocked' && (item.st !== 0 && item.st !== 1 && item.st !== 6)) return false;
+    if (filter === 'blocked' && (item.st !== 0 && item.st !== 1 && item.st !== 5 && item.st !== 6)) return false;
     if (filter === 'cname' && item.st !== 6) return false;
     if (filter === 'allowed' && item.st !== 2) return false;
     if (filter === 'cache' && item.st !== 3) return false;
+    if (filter === 'fail' && item.st !== 7) return false;
     if (q && !item.d.toLowerCase().includes(q) && !item.ip.includes(q)) return false;
     return true;
   });
@@ -1154,6 +1325,9 @@ function renderLogTable() {
     else if (item.st === 0 || item.st === 1) badge = '<span class="badge badge-blocked">Bloqueado</span>';
     else if (item.st === 3) badge = '<span class="badge badge-cache">Caché RAM</span>';
     else if (item.st === 4) badge = '<span class="badge badge-whitelist">Lista Blanca</span>';
+    else if (item.st === 5) badge = '<span class="badge badge-blocked">Dispositivo baneado</span>';
+    else if (item.st === 7) badge = '<span class="badge badge-blocked">Sin respuesta</span>';
+    else if (item.st === 8) badge = '<span class="badge badge-whitelist">SafeSearch</span>';
     else badge = '<span class="badge badge-allowed">Permitido</span>';
 
     return `
@@ -1161,11 +1335,11 @@ function renderLogTable() {
         <td style="color:var(--text-muted)">${item.t}s ago</td>
         <td class="mono">${item.ip}</td>
         <td><span class="badge" style="background:#1e293b">${item.q === 28 ? 'AAAA' : 'A'}</span></td>
-        <td class="mono" style="font-weight:500">${item.d}</td>
+        <td class="mono" style="font-weight:500">${esc(item.d)}</td>
         <td>${badge}</td>
         <td style="text-align:right">
-          <button class="btn-sm" onclick="quickAllow('${item.d}')">+ Whitelist</button>
-          <button class="btn-sm btn-danger" onclick="quickBlock('${item.d}')">+ Bloquear</button>
+          <button class="btn-sm" data-d="${esc(item.d)}" onclick="quickAllow(this.dataset.d)">+ Whitelist</button>
+          <button class="btn-sm btn-danger" data-d="${esc(item.d)}" onclick="quickBlock(this.dataset.d)">+ Bloquear</button>
         </td>
       </tr>
     `;
@@ -1228,7 +1402,7 @@ blForm.onsubmit = async e => {
   let fd = new FormData();
   fd.append('f', f);
   try {
-    let r = await fetch('/upload', { method: 'POST', body: fd });
+    let r = await fetch('/upload' + (blForce.checked ? '?force=1' : ''), { method: 'POST', body: fd });
     blMsg.textContent = r.ok ? '✓ Lista actualizada' : '✗ ' + await r.text();
   } catch (_) { blMsg.textContent = '✗ Error en subida'; }
   blFile.value = '';
