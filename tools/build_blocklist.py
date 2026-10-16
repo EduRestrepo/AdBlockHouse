@@ -31,8 +31,9 @@ MAX_FLASH_BYTES = 2700000             # LittleFS partition limit (0x2A0000 = 2.7
 MAX_CAPACITY_DOMAINS = MAX_FLASH_BYTES // HASH_BYTES  # ~540k domains max
 
 DEFAULT_SOURCES = [
-    'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts',            # base: ads + malware
-    'https://raw.githubusercontent.com/hagezi/dns-blocklists-legacy/main/domains/pro.txt',  # HaGeZi Multi PRO balanced
+    'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts',                         # base: ads + malware
+    'https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.plus-onlydomains.txt', # HaGeZi Multi PRO++
+    'https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt',                       # AdGuard DNS Filter (essential for web tests)
 ]
 
 # Explicit exclusions for critical news/media paywall & user session systems
@@ -52,14 +53,21 @@ def fnv(b: bytes) -> int:
     return h & MASK                      # truncate to HASH_BYTES
 
 def norm(d: str) -> str:
-    d = d.strip().lower().lstrip('*').lstrip('.').rstrip('.')
+    d = d.strip().lower()
+    if d.startswith('||'):
+        d = d[2:]
+    for sep in ('^', '$', '/', '#'):
+        if sep in d:
+            d = d.split(sep, 1)[0]
+    d = d.lstrip('*').lstrip('.').rstrip('.')
     return d[4:] if d.startswith('www.') else d
 
 def read_source(src: str) -> str:
     if os.path.exists(src):
         return open(src, errors='ignore').read()
     print(f'  downloading {src} ...', file=sys.stderr)
-    return urllib.request.urlopen(src, timeout=180).read().decode('utf-8', 'ignore')
+    req = urllib.request.Request(src, headers={'User-Agent': 'Mozilla/5.0 (compatible; AdBlockHouse/1.0)'})
+    return urllib.request.urlopen(req, timeout=180).read().decode('utf-8', 'ignore')
 
 def main():
     args = sys.argv[1:]
@@ -74,14 +82,14 @@ def main():
             print(f'  !! skipped {src}: {e}', file=sys.stderr); continue
         for line in data.splitlines():
             line = line.split('#', 1)[0].strip()
-            if not line or line[0] in '!/':
+            if not line or line[0] in '!/' or line.startswith('@@'):
                 continue
             parts = line.split()
             d = parts[1] if len(parts) >= 2 and parts[0] in ('0.0.0.0','127.0.0.1','::1','::') \
                 else parts[0] if len(parts) == 1 else None
             if d:
                 d = norm(d)
-                if '.' in d and ' ' not in d and d not in DEFAULT_EXCLUSIONS:
+                if '.' in d and ' ' not in d and d not in DEFAULT_EXCLUSIONS and not any(c in d for c in ('*', '/', ':', '$', '^', '|')):
                     domains.add(d)
 
     hashes = sorted(fnv(d.encode()) for d in domains)
